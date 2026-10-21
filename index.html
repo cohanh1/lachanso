@@ -586,7 +586,7 @@ function exportConnectedStudentHTML(){
  if(!validSheetUrl(url)){alert('Cần dán URL Apps Script Web app kết thúc bằng /exec rồi bấm Lưu kết nối trước.');return;}
  const html='<!DOCTYPE html>\n'+document.documentElement.outerHTML;
  const rewritten=html.replace(/const DEFAULT_SCRIPT_URL\s*=\s*(['"])[^'"]*\1;/,'const DEFAULT_SCRIPT_URL='+JSON.stringify(url)+';');
- if(rewritten===html){alert('Không tìm thấy cấu hình URL trong HTML.');return;}
+ if(!/const DEFAULT_SCRIPT_URL\s*=\s*(['\"])[^'\"]*\1;/.test(html)){alert('Không tìm thấy cấu hình URL trong HTML.');return;}
  const blob=new Blob([rewritten],{type:'text/html;charset=utf-8'});
  const href=URL.createObjectURL(blob),link=document.createElement('a');
  link.href=href;link.download='LA_CHAN_SO_v11_21_DA_KET_NOI_CHO_HOC_SINH.html';
@@ -1320,7 +1320,7 @@ function contestRequest(query){
   const timer=setTimeout(()=>finish(Error('Không nhận được dữ liệu từ hệ thống thi đấu.')),25000);
   function finish(err,value){if(done)return;done=true;clearTimeout(timer);n.remove();delete window[cb];err?reject(err):resolve(value);}
   window[cb]=data=>finish(null,data);
-  n.onerror=()=>finish(Error('Không thể đọc kết quả từ Apps Script'));
+  n.onerror=()=>finish(Error('Không thể tải phản hồi JSONP từ Apps Script. Hãy mở URL /exec?action=ping để kiểm tra quyền truy cập và bản triển khai Web App; nếu hiện trang đăng nhập hoặc HTML lỗi thì cần triển khai lại Apps Script với quyền truy cập phù hợp.'));
   const params=new URLSearchParams({...query,callback:cb,_:String(Date.now())});n.src=url+(url.includes('?')?'&':'?')+params;
   document.head.append(n);
  });
@@ -1328,8 +1328,8 @@ function contestRequest(query){
 async function contestTestConnection(){
  const el=document.getElementById('contestConnectionStatus');if(el)el.textContent='Đang kiểm tra máy chủ...';
  try{const r=await contestRequest({action:'ping'});if(!r.ok)throw Error(r.error||'Không có phản hồi hợp lệ');
-  if(!r.contestEnabled||!r.receiptEnabled||r.version!=='11.6')throw Error('Máy chủ chưa cập nhật Apps Script v11.6. Cô hãy tạo bản triển khai mới và kiểm tra URL /exec.');
-  if(el)el.textContent='✅ Đã kết nối hệ thống thi đấu v11.6, hỗ trợ xác nhận tạo phòng.';
+  if(!r.contestEnabled||!r.receiptEnabled)throw Error('Máy chủ chưa hỗ trợ thi đấu/xác nhận ghi danh. Hãy triển khai lại Code.gs phiên bản đồng bộ mới nhất.');
+  if(el)el.textContent='✅ Đã kết nối Apps Script '+String(r.version||'')+', hỗ trợ xác nhận tạo phòng.';
  }catch(e){if(el)el.textContent='❌ '+e.message;}
 }
 async function contestWrite(x){
