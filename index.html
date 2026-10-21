@@ -959,6 +959,12 @@ function loginStudent(event){
   err.textContent='Mã giáo viên không hợp lệ. Chỉ tài khoản giáo viên được cấp mới sử dụng mục này.';
   input.focus();return;
  }
+ // Mỗi lần đăng nhập tạo ngữ cảnh hiển thị sạch, không lộ lượt thi của tài khoản trước.
+ if(contestPoll){clearInterval(contestPoll);contestPoll=null;}
+ if(contestClock){clearInterval(contestClock);contestClock=null;}
+ contestState=null;
+ const priorArena=document.getElementById('contestArena');if(priorArena){priorArena.innerHTML='';priorArena.classList.add('hide');}
+ document.getElementById('contestWaitingRoom')?.classList.add('hide');
  studentCode=requested;err.textContent='';teacherMode=requested===TEACHER_CODE;
  document.querySelectorAll('.teacher-only').forEach(x=>x.style.display=teacherMode?'inline-block':'none');
  if(teacherMode){records=[];answerLogs=[];renderResults();}else{loadAccount(studentCode);loadWarmForStudent(studentCode);}
@@ -973,7 +979,14 @@ function loginStudent(event){
 }
 function logoutStudent(){
  if(flow&&flow.q&&!flow.finished&&!confirm('Bài hiện tại chưa hoàn thành. Các câu đã ghi sẽ được lưu cho mã học sinh này. Em muốn đăng xuất?'))return;
- if(!teacherMode){persistSession();saveWarmForStudent();familySave();}
+ if(!teacherMode){persistSession();saveWarmForStudent();familySave();contestSave();}
+ // Xóa dữ liệu hiển thị khỏi bộ nhớ phiên, không xóa tiến độ đã lưu theo mã.
+ if(contestPoll){clearInterval(contestPoll);contestPoll=null;}
+ if(contestClock){clearInterval(contestClock);contestClock=null;}
+ contestState=null;
+ const arena=document.getElementById('contestArena');if(arena){arena.innerHTML='';arena.classList.add('hide');}
+ document.getElementById('contestWaitingRoom')?.classList.add('hide');
+ const notice=document.getElementById('contestMessage');if(notice)notice.textContent='';
  flow=null;selectedChoice=null;studentCode='';teacherMode=false;document.querySelectorAll('.teacher-only').forEach(x=>x.style.display='none');
  records=[];answerLogs=[];warmSession=null;familyCurrent=null;familyChoice=-1;familyFeedback='';
  document.getElementById('familyExperience')?.classList.add('hide');
@@ -988,6 +1001,12 @@ function logoutStudent(){
  warmOnLogout();renderResults();refreshArenaMap();familyUpdateProgress();
  document.getElementById('studentCode').focus();
 }
+// Đóng tab / trình duyệt: ghi tiến độ hiện có, không ghi nhớ tài khoản đang đăng nhập.
+// Khi mở lại luôn yêu cầu nhập mã; dữ liệu được nạp sau loginStudent().
+window.addEventListener('pagehide',function(){
+ if(!studentCode||teacherMode)return;
+ try{persistSession();saveWarmForStudent();familySave();contestSave();}catch(e){console.warn('Lưu tiến độ khi đóng trang:',e);}
+});
 document.getElementById('studentLoginForm').addEventListener('submit',loginStudent);
 teacherInitContent();readSyncData();restoreSession();document.getElementById('studentCode').value='';renderSync();if(validSheetUrl(sheetUrl())&&sendQueue.some(x=>x.state==='pending'))syncPending(false);
 const advisorTips={link:'Dừng lại trước khi nhấn hoặc quét. Kiểm tra nguồn thông báo và hỏi nhân viên hoặc người lớn bằng kênh chính thức.',account:'Không chia sẻ mật khẩu hoặc mã OTP, kể cả khi người hỏi tự nhận là người quen. Báo ngay người lớn đáng tin cậy.',identity:'Không vội làm theo yêu cầu chuyển tiền hoặc cung cấp dữ liệu. Xác minh bằng cuộc gọi tới số đã biết từ trước.',privacy:'Không cung cấp địa chỉ nhà, trường lớp, lịch trình hoặc ảnh riêng tư cho người lạ. Nhờ người lớn hỗ trợ.',ai:'Không kết luận nội dung là thật chỉ dựa vào gương mặt hoặc giọng nói. Kiểm chứng bằng kênh độc lập và không lan truyền nội dung chưa xác minh.'};
